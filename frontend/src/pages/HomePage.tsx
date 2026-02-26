@@ -47,7 +47,6 @@ const HomePage = () => {
 
                   bg-alabaster-900
                   bg-[radial-gradient(circle_at_top_left,var(--color-prussian-900),transparent_70%),radial-gradient(circle_at_bottom_right,var(--color-prussian-900),transparent_70%)]
-
                   dark:bg-prussian-100
                   dark:bg-[radial-gradient(circle_at_top_left,var(--color-prussian-300),transparent_75%),radial-gradient(circle_at_bottom_right,var(--color-prussian-300),transparent_75%)]"
       >

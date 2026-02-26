@@ -9,7 +9,6 @@ class PredictionRequest(BaseModel):
     previous_scores: float
     tutoring_sessions: float
     physical_activity: float
-    distance_from_home: float
 
     # Ordered Categorical (LOW/MEDIUM/HIGH)
     parental_involvement: Literal["Low", "Medium", "High"]
@@ -18,6 +17,7 @@ class PredictionRequest(BaseModel):
     family_income: Literal["Low", "Medium", "High"]
     teacher_quality: Literal["Low", "Medium", "High"]
     parent_education_level: Literal["High School", "College", "Post Graduate"]
+    distance_from_home:Literal["Near", "Moderate", "Far"]
 
     # Binary
     extracurricular_activities: Literal["Yes", "No"]

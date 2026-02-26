@@ -5,6 +5,7 @@ def encode_input(data):
     peer_map = {"Negative": 0, "Neutral": 1, "Positive": 2}
     gender_map = {"Male": 0, "Female": 1}
     parent_education_level_map = {"High School": 0, "College": 1, "Post Graduate": 2}
+    distance_from_home_map = {"Near": 0, "Moderate": 1, "Far": 2}
 
 
     encoded = [
@@ -14,7 +15,6 @@ def encode_input(data):
         data.previous_scores,
         data.tutoring_sessions,
         data.physical_activity,
-        data.distance_from_home,
 
         ordinal_map[data.parental_involvement],
         ordinal_map[data.access_to_resources],
@@ -22,6 +22,7 @@ def encode_input(data):
         ordinal_map[data.family_income],
         ordinal_map[data.teacher_quality],
         parent_education_level_map[data.parent_education_level],
+        distance_from_home_map[data.distance_from_home],
 
         yes_no_map[data.extracurricular_activities],
         yes_no_map[data.internet_access],

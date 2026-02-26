@@ -1,9 +1,23 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from app.schemas.request import PredictionRequest
 from app.core.encoder import encode_input
 
 app = FastAPI(title="Explainable AI Backend")
+
+origins = [
+    "http://localhost:5173",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,          
+    allow_credentials=True,         
+    allow_methods=["*"],            
+    allow_headers=["*"],            
+)
+
 
 class DummyModel:
     def predict(self, X):

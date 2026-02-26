@@ -1,23 +1,15 @@
 import * as z from "zod"; 
 
 
-//helper function for number input
-const numberField = (min: number, max: number) => z.preprocess(
-    (val) => {
-      if (val === '' || val === undefined || val === null) return undefined;
-      const num = Number(val);
-      return isNaN(num) ? undefined : num;
-    },
-    z.number().int().min(min).max(max)
-  );
-
 const inputFormValidationSchema = z.object({
-    hours_studied: numberField(1, 44),
-    attendance: numberField(50, 100),
-    sleep_hours: numberField(4, 10),
-    previous_scores: numberField(0, 100),
-    tutoring_sessions: numberField(0, 30),
-    physical_activity: numberField(0, 10),
+    
+    hours_studied: z.number().int().min(1,{message: "You're cooked"}).max(44, {message: "who tf studies that much, keep it under 44hrs"}),
+    attendance: z.number().int().min(30, {message: "Shame on you"}).max(100, {message:"Bruh get a life!!!"}),
+    sleep_hours: z.number().int().min(4, {message: "Get some sleep"}).max(10, {message:"Lazy ass..."}),
+    previous_scores: z.number().int().min(0, {message: "You are the real deal"}).max(100, {message:"Einstien IQ?"}),
+    tutoring_sessions: z.number().int().min(0, {message:"How come it can be negative"}).max(30, {message:"Who're you trying to beat?"}),
+    physical_activity: z.number().int().min(0,{message:"Touch some grass"}).max(30, {message:"Next LeBron James?"}),
+
 
     parental_involvement: z.enum(["Low", "Medium", "High"]),
     access_to_resources: z.enum(["Low", "Medium", "High"]),

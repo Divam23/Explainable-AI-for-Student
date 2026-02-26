@@ -12,6 +12,8 @@ import {
   FieldError,
   FieldLabel,
 } from "./ui/field";
+
+
 import type { ReactNode } from "react";
 
 type inputControlProps<
@@ -63,8 +65,8 @@ const BaseInput = <
       name={name}
       control={control}
       render={({ field, fieldState }) => (
-        <Field data-invalid={fieldState.invalid}>
-          <FieldContent className="gap-0.5">
+        <Field className=" lg:min-h-[7.6rem] min-h-32 text-pretty min-w-fit" data-invalid={fieldState.invalid}>
+          <FieldContent className="gap-1.5">
             <FieldLabel htmlFor={field.name}>{label}</FieldLabel>
             <FieldDescription>{description}</FieldDescription>
             {children({
@@ -72,13 +74,14 @@ const BaseInput = <
               id: field.name,
               "aria-invalid": fieldState.invalid,
             })}
-            {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
           </FieldContent>
+            {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
         </Field>
       )}
     />
   );
 };
+
 
 const InputField: inputControlFunction = ({
   type = "text",
@@ -87,7 +90,7 @@ const InputField: inputControlFunction = ({
 }) => {
   return (
     <BaseInput {...props} type={type}>
-      {(field) => (
+      {({...field}) => (
         <Input
           {...field}
           type={type}
@@ -107,4 +110,5 @@ const InputField: inputControlFunction = ({
   );
 };
 
-export default InputField;
+
+export {InputField};

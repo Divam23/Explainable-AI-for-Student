@@ -9,27 +9,26 @@ def encode_input(data):
 
 
     encoded = [
+
         data.hours_studied,
         data.attendance,
-        data.sleep_hours,
-        data.previous_scores,
-        data.tutoring_sessions,
-        data.physical_activity,
-
         ordinal_map[data.parental_involvement],
         ordinal_map[data.access_to_resources],
+        yes_no_map[data.extracurricular_activities],
+        data.sleep_hours,
+        data.previous_scores,
         ordinal_map[data.motivation_level],
+        yes_no_map[data.internet_access],
+        data.tutoring_sessions,
         ordinal_map[data.family_income],
         ordinal_map[data.teacher_quality],
-        parent_education_level_map[data.parent_education_level],
-        distance_from_home_map[data.distance_from_home],
-
-        yes_no_map[data.extracurricular_activities],
-        yes_no_map[data.internet_access],
-        yes_no_map[data.learning_disabilities],
-
         school_type_map[data.school_type],
         peer_map[data.peer_influence],
+        data.physical_activity,
+        yes_no_map[data.learning_disabilities],
+        parent_education_level_map[data.parent_education_level],
+        distance_from_home_map[data.distance_from_home],
         gender_map[data.gender]
-    ]   
+    ]
+
     return encoded

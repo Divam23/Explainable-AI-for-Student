@@ -4,13 +4,27 @@ import {
   type InputFormData,
 } from "@/validators/inputForm.validation";
 import { zodResolver } from "@hookform/resolvers/zod";
-import axios from "axios"
+import axios from "axios";
 import { Controller, useForm, type Resolver } from "react-hook-form";
 import { InputField } from "@/components/InputField";
+//import { toast } from "sonner";
+
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { Button } from "@/components/ui/button";
+
 import {
   Field,
   FieldContent,
@@ -19,12 +33,15 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 
-
+import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 const PredictionPage = () => {
+  const navigate = useNavigate();
 
   const form = useForm<InputFormData>({
     resolver: zodResolver(formSchema) as Resolver<InputFormData>,
+    mode: "onChange",
     defaultValues: {
       hours_studied: 1,
       attendance: 50,
@@ -52,18 +69,24 @@ const PredictionPage = () => {
 
   //TODO: Navigation to analysis page +++++++++++++++++++++++++++===========================
 
-  const onSubmit = async(data: InputFormData) => {
+  const [open, setOpen] = useState<boolean>(false);
+
+  const onSubmit = async (data: InputFormData) => {
     try {
       //console.log("Form Submitted, Details are provided below: ", data);
-      const response = await axios.post<typeof data>("https://hyperosmic-sylas-ideational.ngrok-free.dev/predict", data)
-      console.log(response)
-      if(response){
-        
+
+      const response = await axios.post<typeof data>(
+        "https://hyperosmic-sylas-ideational.ngrok-free.dev/predict",
+        data,
+      );
+      console.log(response);
+      if (response.status === 200) {
+        navigate("/analysis");
       }
       return response;
     } catch (error) {
-      console.log("Something went wrong: ", error)
-      throw error
+      console.log("Something went wrong: ", error);
+      throw error;
     }
   };
 
@@ -71,7 +94,7 @@ const PredictionPage = () => {
     <div
       className="main-container
                 h-auto p-5
-                min-w-140 lg:min-w-190 min-h-auto 
+                min-w-140 md:min-w-190 min-h-auto 
                 text-prussian-500 dark:text-alabaster-900
                 flex flex-col items-center justify-center flex-wrap
                 
@@ -87,14 +110,12 @@ const PredictionPage = () => {
         </div>
         <div className="sub-heading text-xl text-pretty lg:max-w-5xl text-center dark:text-alabaster-300 text-prussian-700 tracking-tight">
           Fill in the details below to get an AI-powered prediction of your
-          academic performance along with personalized recommendations.
+          academic performance along with personalized recommendations{" "}
+          <strong>(Use arrow keys to alter the values)</strong> .
         </div>
       </div>
       <div className="middle-section h-full w-full lg:max-w-5xl  p-10 border-2 rounded-[4rem]">
-        <form
-          onSubmit={form.handleSubmit(onSubmit)}
-          className="flex flex-col gap-3 w-full"
-        >
+        <form id="predictionForm" className="flex flex-col gap-3 w-full">
           <div className="academic_section mb-7">
             <div className="text-3xl font-semibold mb-4 font-mono">
               Academic Information
@@ -220,8 +241,12 @@ const PredictionPage = () => {
                         onValueChange={field.onChange}
                       >
                         <TabsList className="">
-                          <TabsTrigger className="" value="Low">Not much</TabsTrigger>
-                          <TabsTrigger value="Medium">Up to some extent</TabsTrigger>
+                          <TabsTrigger className="" value="Low">
+                            Not much
+                          </TabsTrigger>
+                          <TabsTrigger value="Medium">
+                            Up to some extent
+                          </TabsTrigger>
                           <TabsTrigger value="High">Too much</TabsTrigger>
                         </TabsList>
                       </Tabs>
@@ -251,9 +276,13 @@ const PredictionPage = () => {
                         onValueChange={field.onChange}
                       >
                         <TabsList className="">
-                          <TabsTrigger className="" value="Low">Below Middle Class</TabsTrigger>
+                          <TabsTrigger className="" value="Low">
+                            Below Middle Class
+                          </TabsTrigger>
                           <TabsTrigger value="Medium">Middle Class</TabsTrigger>
-                          <TabsTrigger value="High">Above Middle Class</TabsTrigger>
+                          <TabsTrigger value="High">
+                            Above Middle Class
+                          </TabsTrigger>
                         </TabsList>
                       </Tabs>
                     </FieldContent>
@@ -282,9 +311,13 @@ const PredictionPage = () => {
                         onValueChange={field.onChange}
                       >
                         <TabsList className="">
-                          <TabsTrigger className="" value="High School">High School</TabsTrigger>
+                          <TabsTrigger className="" value="High School">
+                            High School
+                          </TabsTrigger>
                           <TabsTrigger value="College">College</TabsTrigger>
-                          <TabsTrigger value="Postgraduate">Post Graduate</TabsTrigger>
+                          <TabsTrigger value="Postgraduate">
+                            Post Graduate
+                          </TabsTrigger>
                         </TabsList>
                       </Tabs>
                     </FieldContent>
@@ -313,7 +346,9 @@ const PredictionPage = () => {
                         onValueChange={field.onChange}
                       >
                         <TabsList className="">
-                          <TabsTrigger className="" value="Near">Nearby</TabsTrigger>
+                          <TabsTrigger className="" value="Near">
+                            Nearby
+                          </TabsTrigger>
                           <TabsTrigger value="Moderate">Far</TabsTrigger>
                           <TabsTrigger value="Far">Very Far</TabsTrigger>
                         </TabsList>
@@ -344,9 +379,15 @@ const PredictionPage = () => {
                         onValueChange={field.onChange}
                       >
                         <TabsList className="">
-                          <TabsTrigger className="" value="Low">Not at all</TabsTrigger>
-                          <TabsTrigger value="Medium">Only necessary ones</TabsTrigger>
-                          <TabsTrigger value="High">Every possible notes accessible</TabsTrigger>
+                          <TabsTrigger className="" value="Low">
+                            Not at all
+                          </TabsTrigger>
+                          <TabsTrigger value="Medium">
+                            Only necessary ones
+                          </TabsTrigger>
+                          <TabsTrigger value="High">
+                            Every possible notes accessible
+                          </TabsTrigger>
                         </TabsList>
                       </Tabs>
                     </FieldContent>
@@ -375,7 +416,9 @@ const PredictionPage = () => {
                         onValueChange={field.onChange}
                       >
                         <TabsList className="">
-                          <TabsTrigger className="" value="Yes">Yes</TabsTrigger>
+                          <TabsTrigger className="" value="Yes">
+                            Yes
+                          </TabsTrigger>
                           <TabsTrigger value="No">No</TabsTrigger>
                         </TabsList>
                       </Tabs>
@@ -386,7 +429,6 @@ const PredictionPage = () => {
                   </Field>
                 )}
               />
-
             </div>
           </div>
           <div className="education_section mb-7">
@@ -420,7 +462,9 @@ const PredictionPage = () => {
                         onValueChange={field.onChange}
                       >
                         <TabsList className="">
-                          <TabsTrigger className="" value="Low">Good</TabsTrigger>
+                          <TabsTrigger className="" value="Low">
+                            Good
+                          </TabsTrigger>
                           <TabsTrigger value="Medium">Very Good</TabsTrigger>
                           <TabsTrigger value="High">Excellent</TabsTrigger>
                         </TabsList>
@@ -451,7 +495,9 @@ const PredictionPage = () => {
                         onValueChange={field.onChange}
                       >
                         <TabsList className="">
-                          <TabsTrigger className="" value="Public">Government</TabsTrigger>
+                          <TabsTrigger className="" value="Public">
+                            Government
+                          </TabsTrigger>
                           <TabsTrigger value="Private">Private</TabsTrigger>
                         </TabsList>
                       </Tabs>
@@ -472,7 +518,8 @@ const PredictionPage = () => {
                         Level of Peer Influence
                       </FieldLabel>
                       <FieldDescription>
-                        How much do your friends and classmates influence your academic performance?
+                        How much do your friends and classmates influence your
+                        academic performance?
                       </FieldDescription>
                       <Tabs
                         defaultValue=""
@@ -481,9 +528,15 @@ const PredictionPage = () => {
                         onValueChange={field.onChange}
                       >
                         <TabsList className="">
-                          <TabsTrigger className="" value="Negative">Affects Negatively</TabsTrigger>
-                          <TabsTrigger value="Neutral">Remains Neutral</TabsTrigger>
-                          <TabsTrigger value="Positive">Affects Positively</TabsTrigger>
+                          <TabsTrigger className="" value="Negative">
+                            Affects Negatively
+                          </TabsTrigger>
+                          <TabsTrigger value="Neutral">
+                            Remains Neutral
+                          </TabsTrigger>
+                          <TabsTrigger value="Positive">
+                            Affects Positively
+                          </TabsTrigger>
                         </TabsList>
                       </Tabs>
                     </FieldContent>
@@ -493,7 +546,6 @@ const PredictionPage = () => {
                   </Field>
                 )}
               />
-
             </div>
           </div>
           <div className="personal_section mb-7">
@@ -528,9 +580,15 @@ const PredictionPage = () => {
                         onValueChange={field.onChange}
                       >
                         <TabsList className="">
-                          <TabsTrigger className="" value="Low">No motivation at all</TabsTrigger>
-                          <TabsTrigger value="Medium">A little motivation</TabsTrigger>
-                          <TabsTrigger value="High">Highly motivated</TabsTrigger>
+                          <TabsTrigger className="" value="Low">
+                            No motivation at all
+                          </TabsTrigger>
+                          <TabsTrigger value="Medium">
+                            A little motivation
+                          </TabsTrigger>
+                          <TabsTrigger value="High">
+                            Highly motivated
+                          </TabsTrigger>
                         </TabsList>
                       </Tabs>
                     </FieldContent>
@@ -560,7 +618,9 @@ const PredictionPage = () => {
                         onValueChange={field.onChange}
                       >
                         <TabsList className="">
-                          <TabsTrigger className="" value="Yes">Yes</TabsTrigger>
+                          <TabsTrigger className="" value="Yes">
+                            Yes
+                          </TabsTrigger>
                           <TabsTrigger value="No">No</TabsTrigger>
                         </TabsList>
                       </Tabs>
@@ -577,12 +637,8 @@ const PredictionPage = () => {
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid} className="gap-1">
                     <FieldContent className="gap-1.5">
-                      <FieldLabel htmlFor={field.name}>
-                        Gender
-                      </FieldLabel>
-                      <FieldDescription>
-                        What is your gender?
-                      </FieldDescription>
+                      <FieldLabel htmlFor={field.name}>Gender</FieldLabel>
+                      <FieldDescription>What is your gender?</FieldDescription>
                       <Tabs
                         defaultValue=""
                         orientation="vertical"
@@ -591,7 +647,9 @@ const PredictionPage = () => {
                         onValueChange={field.onChange}
                       >
                         <TabsList className="">
-                          <TabsTrigger className="" value="Male">Male</TabsTrigger>
+                          <TabsTrigger className="" value="Male">
+                            Male
+                          </TabsTrigger>
                           <TabsTrigger value="Female">Female</TabsTrigger>
                         </TabsList>
                       </Tabs>
@@ -604,7 +662,51 @@ const PredictionPage = () => {
               />
             </div>
           </div>
-          <Button className="active:bg-orange-500 bg-prussian-500 dark:text-alabaster-900 hover:bg-prussian-600">Create</Button>
+          {/* <Button type="button" className="active:bg-orange-500 bg-prussian-500 dark:text-alabaster-900 hover:bg-prussian-600">
+            Create
+          </Button> */}
+          <AlertDialog onOpenChange={setOpen} open={open}>
+            <AlertDialogTrigger asChild>
+              <Button
+                type="button"
+                className="active:bg-orange-500 bg-prussian-500 dark:text-alabaster-900 hover:bg-prussian-600"
+              >
+                Continue
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                {!form.formState.isValid ? (
+                  <>
+                  <AlertDialogTitle className="text-red-500">Please fill all the fields correctly</AlertDialogTitle>
+                  <AlertDialogDescription>Check if something's wrong</AlertDialogDescription>
+                  </>
+                ) : (
+                  <>
+                    <AlertDialogTitle>
+                      Are you absolutely sure?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to submit the form?
+                    </AlertDialogDescription>
+                  </>
+                )}
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  disabled={!form.formState.isValid}
+                  className="disabled:bg-gray-700"
+                  onClick={form.handleSubmit(async (data) => {
+                    setOpen(false);
+                    await onSubmit(data);
+                  })}
+                >
+                  Submit
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </form>
       </div>
     </div>

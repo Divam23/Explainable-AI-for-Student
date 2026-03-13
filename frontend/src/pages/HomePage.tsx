@@ -85,7 +85,7 @@ const HomePage = () => {
                   Start Performance Analysis
                 </Link>
                 <Link
-                  to={"#"}
+                  to="analysis"
                   className="text-sm/6 font-semibold text-prussian-500 dark:text-white"
                 >
                   Learn How it Works <span aria-hidden="true">→</span>

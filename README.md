@@ -201,6 +201,63 @@ To run the project locally:
 4. Fill in the form on the prediction page
 5. Submit the form to view the analysis report, feature impact explanation, and AI suggestions
 
+## Using ngrok to Avoid CORS or Network Access Issues
+
+If your frontend cannot reach the backend reliably in your local environment, you can expose the FastAPI server through `ngrok` and use the public URL in the frontend.
+
+### 1. Start the backend locally
+
+From the `backend/` folder:
+
+```bash
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+### 2. Start ngrok
+
+In a new terminal, expose port `8000`:
+
+```bash
+ngrok http 8000
+```
+
+ngrok will give you a public forwarding URL like:
+
+```text
+https://your-project-name.ngrok-free.app
+```
+
+### 3. Update the frontend environment variable
+
+Open `frontend/.env` and set:
+
+```env
+VITE_BACKEND_URL=https://your-project-name.ngrok-free.app
+```
+
+### 4. Restart the frontend
+
+If the frontend is already running, stop it and start it again:
+
+```bash
+npm run dev
+```
+
+### 5. Open the app
+
+Now open:
+
+```text
+http://localhost:5173
+```
+
+Important notes:
+
+- ngrok changes the public URL each time unless you are using a reserved domain
+- whenever the ngrok URL changes, update `frontend/.env` again
+- keep the backend server and ngrok tunnel running at the same time
+- if you use ngrok often, it is a good option for demos and cross-device testing
+
 ## API Overview
 
 ### `GET /`
@@ -247,6 +304,7 @@ Accepts student data and returns:
 - Make sure the backend is running on `http://localhost:8000`
 - Make sure `frontend/.env` contains `VITE_BACKEND_URL=http://localhost:8000`
 - Restart the frontend after changing the `.env` file
+- If local access still fails, run the backend through ngrok and set `VITE_BACKEND_URL` to the ngrok HTTPS URL
 
 ### AI suggestions are missing
 
@@ -286,4 +344,4 @@ VITE_BACKEND_URL=http://localhost:8001
 
 ## License
 
-This project currently does not define a license. Add a license file if you plan to share or publish it publicly.
+This project currently does not define a license. I will add a license file if it is required in the future.

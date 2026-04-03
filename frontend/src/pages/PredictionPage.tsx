@@ -40,6 +40,8 @@ import { useState } from "react";
 
 import { useModelStore } from "@/context/ModelInputContext";
 
+const API_URL = import.meta.env.VITE_BACKEND_URL ?? "http://localhost:8000";
+
 const PredictionPage = () => {
   const navigate = useNavigate();
 
@@ -81,7 +83,7 @@ const PredictionPage = () => {
       //console.log("Form Submitted, Details are provided below: ", data);
 
       const response = await axios.post<typeof data>(
-        "https://hyperosmic-sylas-ideational.ngrok-free.dev/predict",
+        `${API_URL}/predict`,
         data,
       );
       console.log(response);

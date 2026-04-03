@@ -1,29 +1,20 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
   ArrowUpRight,
   ArrowDownRight,
   Minus,
-  ExternalLink,
   Sparkles,
-  TrendingUp,
-  TrendingDown,
-  ChevronRight,
   BookOpen,
   Brain,
   Target,
   Activity,
   Info,
-  Loader2,
-  ChevronDown,
-  AlertCircle,
 } from "lucide-react";
-
-// ─── Types ────────────────────────────────────────────────────────────────
+import axios from "axios";
+import { useModelStore } from "@/context/ModelInputContext";
 
 interface ModelInput {
   hours_studied: number;
@@ -38,7 +29,7 @@ interface ModelInput {
   motivation_level: "Low" | "Medium" | "High";
   family_income: "Low" | "Medium" | "High";
   teacher_quality: "Low" | "Medium" | "High";
-  parent_education_level: "High School" | "College" | "Post Graduate";
+  parent_education_level: "High School" | "College" | "Postgraduate";
   extracurricular_activities: "Yes" | "No";
   internet_access: "Yes" | "No";
   learning_disabilities: "Yes" | "No";
@@ -47,173 +38,121 @@ interface ModelInput {
   gender: "Male" | "Female";
 }
 
-interface ModelResponse {
-  predicted_score: number;
-  confidence: number;
-  performance_tier: "High" | "Medium" | "Low";
-  feature_importance: {
-    feature: string;
-    importance: number;
-    current_value: string | number;
-    direction: "positive" | "negative";
-  }[];
+interface AIWeakness {
+  feature: string;
+  impact: string;
+  advice: string;
+}
+
+interface AIStrength {
+  feature: string;
+  reason: string;
 }
 
 interface AISuggestion {
-  category: string;
   title: string;
-  description: string;
-  priority: "high" | "medium" | "low";
-  estimated_impact: string;
-  actionable_steps: string[];
+  priority: "High" | "Medium" | "Low";
+  expected_impact: string;
+  action_steps: string[];
 }
 
-// ─── Mock Data (Replace with real API response) ──────────────────────────
+interface AIResponse {
+  strengths: AIStrength[];
+  weaknesses: AIWeakness[];
+  suggestions: AISuggestion[];
+}
 
-const modelInput: ModelInput = {
-  hours_studied: 34,
-  attendance: 93,
-  sleep_hours: 4,
-  previous_scores: 95,
-  tutoring_sessions: 2,
-  physical_activity: 0,
-  distance_from_home: "Far",
-  parental_involvement: "Low",
-  access_to_resources: "Low",
-  motivation_level: "Low",
-  family_income: "Low",
-  teacher_quality: "Low",
-  parent_education_level: "Post Graduate",
-  extracurricular_activities: "No",
-  internet_access: "Yes",
-  learning_disabilities: "No",
-  school_type: "Public",
-  peer_influence: "Negative",
-  gender: "Female",
-};
+interface ModelResponse {
+  message: string;
+  received_input: number[];
+  prediction: number;
+  explaination: string[];
+  contribution: {
+    [key: string]: number;
+  };
+  aiSuggestions?: AIResponse;
+}
 
-const modelResponse: ModelResponse = {
-  predicted_score: 67,
-  confidence: 82,
-  performance_tier: "Medium",
-  feature_importance: [
-    { feature: "hours_studied", importance: 85, current_value: 34, direction: "positive" },
-    { feature: "previous_scores", importance: 78, current_value: 95, direction: "positive" },
-    { feature: "attendance", importance: 71, current_value: 93, direction: "positive" },
-    { feature: "sleep_hours", importance: -82, current_value: 4, direction: "negative" },
-    { feature: "motivation_level", importance: -68, current_value: "Low", direction: "negative" },
-    { feature: "physical_activity", importance: -54, current_value: 0, direction: "negative" },
-    { feature: "peer_influence", importance: -47, current_value: "Negative", direction: "negative" },
-    { feature: "access_to_resources", importance: -41, current_value: "Low", direction: "negative" },
-    { feature: "family_income", importance: -38, current_value: "Low", direction: "negative" },
-    { feature: "teacher_quality", importance: -32, current_value: "Low", direction: "negative" },
-  ],
-};
-
-// Mock AI suggestions (replace with real API call)
-const aiSuggestions: AISuggestion[] = [
-  {
-    category: "Health & Wellness",
-    title: "Critical Sleep Deficit",
-    description:
-      "With only 4 hours of sleep per night, you're operating at a significant cognitive deficit. Research shows that students need 7-9 hours for optimal memory consolidation and exam performance.",
-    priority: "high",
-    estimated_impact: "+8-12 points",
-    actionable_steps: [
-      "Set a consistent bedtime at 10:30 PM to wake at 6:30 AM",
-      "Reduce study hours from 34/week to 28/week to create time for sleep",
-      "Create a wind-down routine 30 minutes before bed (no screens)",
-      "Consider naps: 20-minute power naps between 2-3 PM can help",
-    ],
-  },
-  {
-    category: "Mental Health",
-    title: "Motivation & Burnout Risk",
-    description:
-      "Low motivation combined with extreme study hours (34/week) and minimal sleep suggests burnout risk. You're studying hard but not efficiently.",
-    priority: "high",
-    estimated_impact: "+5-8 points",
-    actionable_steps: [
-      "Identify your 'why' — write down 3 personal reasons this exam matters",
-      "Use the Pomodoro Technique: 25 min focus, 5 min break",
-      "Reward yourself after study sessions (not before)",
-      "Connect with a counselor or mentor for accountability",
-    ],
-  },
-  {
-    category: "Physical Health",
-    title: "Zero Physical Activity",
-    description:
-      "No physical activity compounds sleep deprivation and stress. Even 20 minutes of movement per day improves focus, memory, and mood.",
-    priority: "medium",
-    estimated_impact: "+3-5 points",
-    actionable_steps: [
-      "Morning: 10-minute walk before studying",
-      "Afternoon: Stretching or yoga between study blocks",
-      "Join a study group that meets for walks (combine social + movement)",
-      "Use movement as a study break reward",
-    ],
-  },
-  {
-    category: "Social Environment",
-    title: "Negative Peer Influence",
-    description:
-      "Negative peer influence can undermine motivation and create distractions. Seek out peers who share your academic goals.",
-    priority: "medium",
-    estimated_impact: "+2-4 points",
-    actionable_steps: [
-      "Find 1-2 study partners who are also preparing seriously",
-      "Join online study communities or Discord servers for your subject",
-      "Politely limit time with peers who discourage studying",
-      "Consider library study sessions to reduce social distractions",
-    ],
-  },
-  {
-    category: "Resources & Support",
-    title: "Low Access to Resources",
-    description:
-      "Limited resources can be overcome with free online tools. You have internet access — leverage it strategically.",
-    priority: "low",
-    estimated_impact: "+2-3 points",
-    actionable_steps: [
-      "Khan Academy, Coursera, edX for subject-specific courses",
-      "YouTube channels: Crash Course, 3Blue1Brown (math), etc.",
-      "Free practice exams: Search '[your exam] practice test PDF'",
-      "Ask teachers for recommended free resources",
-    ],
-  },
-];
-
-// ─── Utility Functions ────────────────────────────────────────────────────
+const API_URL = import.meta.env.BACKEND_URL ?? "http://localhost:8000";
 
 const getFeatureLabel = (feature: string): string => {
   const labels: Record<string, string> = {
-    hours_studied: "Study Hours per Week",
-    attendance: "Attendance Rate",
-    sleep_hours: "Sleep Hours per Night",
-    previous_scores: "Previous Exam Scores",
-    tutoring_sessions: "Tutoring Sessions per Month",
-    physical_activity: "Physical Activity (hrs/week)",
-    distance_from_home: "Distance from School",
-    parental_involvement: "Parental Involvement",
-    access_to_resources: "Access to Resources",
-    motivation_level: "Motivation Level",
-    family_income: "Family Income",
-    teacher_quality: "Teacher Quality",
-    parent_education_level: "Parent Education Level",
-    extracurricular_activities: "Extracurricular Activities",
-    internet_access: "Internet Access",
-    learning_disabilities: "Learning Disabilities",
-    school_type: "School Type",
-    peer_influence: "Peer Influence",
-    gender: "Gender",
+    Hours_Studied: "Study Hours per Week",
+    Attendance: "Attendance Rate",
+    Sleep_Hours: "Sleep Hours per Night",
+    Previous_Scores: "Previous Exam Scores",
+    Tutoring_Sessions: "Tutoring Sessions",
+    Physical_Activity: "Physical Activity",
+    Distance_from_Home: "Distance from Home",
+    Parental_Involvement: "Parental Involvement",
+    Access_to_Resources: "Access to Resources",
+    Motivation_Level: "Motivation Level",
+    Family_Income: "Family Income",
+    Teacher_Quality: "Teacher Quality",
+    Parental_Education_Level: "Parent Education Level",
+    Extracurricular_Activities: "Extracurricular Activities",
+    Internet_Access: "Internet Access",
+    Learning_Disabilities: "Learning Disabilities",
+    School_Type: "School Type",
+    Peer_Influence: "Peer Influence",
+    Gender: "Gender",
   };
   return labels[feature] || feature;
 };
 
-const formatValue = (value: string | number): string => {
-  if (typeof value === "number") return value.toString();
-  return value;
+const formatValue = (key: string, input: ModelInput): string => {
+  const keyMap: Record<string, keyof ModelInput> = {
+    Hours_Studied: "hours_studied",
+    Attendance: "attendance",
+    Sleep_Hours: "sleep_hours",
+    Previous_Scores: "previous_scores",
+    Tutoring_Sessions: "tutoring_sessions",
+    Physical_Activity: "physical_activity",
+    Distance_from_Home: "distance_from_home",
+    Parental_Involvement: "parental_involvement",
+    Access_to_Resources: "access_to_resources",
+    Motivation_Level: "motivation_level",
+    Family_Income: "family_income",
+    Teacher_Quality: "teacher_quality",
+    Parental_Education_Level: "parent_education_level",
+    Extracurricular_Activities: "extracurricular_activities",
+    Internet_Access: "internet_access",
+    Learning_Disabilities: "learning_disabilities",
+    School_Type: "school_type",
+    Peer_Influence: "peer_influence",
+    Gender: "gender",
+  };
+
+  const inputKey = keyMap[key];
+  if (!inputKey) return "";
+
+  const value = input[inputKey];
+
+  if (key === "Hours_Studied") return `${value} hrs/week`;
+  if (key === "Attendance") return `${value}%`;
+  if (key === "Sleep_Hours") return `${value} hrs/night`;
+  if (key === "Physical_Activity") return `${value} hrs/week`;
+  if (key === "Tutoring_Sessions") return `${value} sessions`;
+
+  return String(value);
+};
+
+const getPerformanceTier = (score: number): "High" | "Medium" | "Low" => {
+  if (score >= 80) return "High";
+  if (score >= 60) return "Medium";
+  return "Low";
+};
+
+const calculateConfidence = (contributions: {
+  [key: string]: number;
+}): number => {
+  const values = Object.values(contributions || {}).map(Math.abs);
+  if (values.length === 0) return 75; 
+  const max = Math.max(...values);
+  const avg = values.reduce((a, b) => a + b, 0) / values.length;
+  // avoid division by zero
+  const factor = avg === 0 ? 1 : max / avg;
+  return Math.min(95, Math.max(70, Math.round(75 + factor * 5)));
 };
 
 const tierConfig = {
@@ -224,8 +163,8 @@ const tierConfig = {
   },
   Medium: {
     color:
-      "bg-amber-500/15 text-amber-700 border-amber-300 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-700",
-    dot: "bg-amber-500",
+      "bg-orange-500/15 text-orange-400 border-orange-400 dark:bg-orange-600/10 dark:text-orange-500 dark:border-orange-700",
+    dot: "bg-orange-500",
   },
   Low: {
     color:
@@ -234,103 +173,158 @@ const tierConfig = {
   },
 };
 
-const priorityConfig = {
-  high: {
-    color: "border-l-red-400 dark:border-l-red-500",
-    badge: "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/50 dark:text-red-300 dark:border-red-800",
-  },
-  medium: {
-    color: "border-l-amber-400 dark:border-l-amber-500",
-    badge: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800",
-  },
-  low: {
-    color: "border-l-blue-400 dark:border-l-blue-500",
-    badge: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800",
-  },
-};
-
-// ─── Component ────────────────────────────────────────────────────────────
-
 export default function ResultsPage() {
+  const modelInput = useModelStore((state) => state.modelInput);
+
+  if (!modelInput) {
+    return <div>No input data found</div>;
+  }
+
+  const [modelResponse, setModelResponse] = useState<ModelResponse | null>(
+    null,
+  );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchPrediction();
+  }, []);
+
+  const ai = modelResponse?.aiSuggestions;
+
+  const weaknesses = ai?.weaknesses ?? [];
+  const strengths = ai?.strengths ?? [];
+  const suggestions = ai?.suggestions ?? [];
+
+  async function fetchPrediction() {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await axios.post(`${API_URL}/predict`, modelInput, {
+        headers: { "Content-Type": "application/json" },
+        timeout: 60000,
+      });
+      setModelResponse(res.data as ModelResponse);
+    } catch (err: any) {
+      // prefer server message, then axios message
+      const serverMsg = err?.response?.data ?? err?.response?.data?.message;
+      setError(
+        typeof serverMsg === "string"
+          ? serverMsg
+          : (err?.response?.data?.message ?? err.message ?? String(err)),
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const [aiExpanded, setAiExpanded] = useState(false);
-  const [loadingAI, setLoadingAI] = useState(false);
-  const [expandedSuggestion, setExpandedSuggestion] = useState<number | null>(null);
+  const predictedScore = Math.round(modelResponse?.prediction ?? 0);
+  const previousScore = modelInput.previous_scores;
+  const scoreDelta = predictedScore - previousScore;
+  const performanceTier = getPerformanceTier(predictedScore);
+  const confidence = calculateConfidence(modelResponse?.contribution ?? {});
+  const tier = tierConfig[performanceTier];
 
-  const tier = tierConfig[modelResponse.performance_tier];
-  const scoreDelta = modelResponse.predicted_score - modelInput.previous_scores;
+  const sortedContributions = Object.entries(modelResponse?.contribution ?? {})
+    .map(([key, value]) => ({
+      feature: key,
+      contribution: value,
+      direction: value > 0 ? ("positive" as const) : ("negative" as const),
+    }))
+    .sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution));
 
-  const positiveFeatures = modelResponse.feature_importance
+  const positiveFactors = sortedContributions
     .filter((f) => f.direction === "positive")
-    .sort((a, b) => b.importance - a.importance)
     .slice(0, 4);
 
-  const negativeFeatures = modelResponse.feature_importance
+  const negativeFactors = sortedContributions
     .filter((f) => f.direction === "negative")
-    .sort((a, b) => Math.abs(b.importance) - Math.abs(a.importance))
     .slice(0, 4);
 
-  const handleGenerateAISuggestions = async () => {
-    setLoadingAI(true);
-    // Simulate API call — replace with real call to your backend
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setLoadingAI(false);
-  };
+  const maxContribution =
+    sortedContributions.length > 0
+      ? Math.max(...sortedContributions.map((f) => Math.abs(f.contribution)))
+      : 1;
+  const toPercentage = (value: number) =>
+    Math.round((Math.abs(value) / maxContribution) * 100);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div>Loading prediction…</div>
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div>
+          <p className="text-red-600">API error: {error}</p>
+          <button onClick={fetchPrediction} className="mt-2 underline">
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-[#F8F7F4] dark:bg-[#0a1628] transition-colors duration-300">
+    <div className="min-h-screen bg-alabaster-900 dark:bg-prussian-100 transition-colors duration-300">
       {/* Subtle corner radials */}
-      <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -top-64 -right-64 h-[600px] w-[600px] rounded-full bg-[#003153]/5 dark:bg-[#4a90c4]/5 blur-3xl" />
-        <div className="absolute -bottom-64 -left-64 h-[500px] w-[500px] rounded-full bg-[#003153]/4 dark:bg-[#4a90c4]/4 blur-3xl" />
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 overflow-hidden"
+      >
+        <div className="absolute -top-64 -right-64 h-150 w-150 rounded-full bg-prussian-500/5 dark:bg-prussian-700/5 blur-3xl" />
+        <div className="absolute -bottom-64 -left-64 h-125 w-125 rounded-full bg-orange-500/4 dark:bg-orange-600/4 blur-3xl" />
       </div>
 
       <div className="relative mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
-        {/* ── Page Header ──────────────────────────────────────────────────── */}
         <header className="mb-10">
-          <div className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-[#003153]/50 dark:text-[#93b8d4]/50">
+          <div className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-prussian-500/50 dark:text-prussian-800/50">
             <Activity className="h-3.5 w-3.5" />
             <span>Prediction Report</span>
-            <span className="text-[#003153]/30 dark:text-[#93b8d4]/30">·</span>
+            <span className="text-prussian-500/30 dark:text-prussian-800/30">
+              ·
+            </span>
             <span>Student Performance AI</span>
           </div>
-          <h1 className="font-['Playfair_Display',Georgia,serif] text-3xl font-bold tracking-tight text-[#002244] dark:text-[#d4e6f1] sm:text-4xl">
+          <h1 className="font-['Playfair_Display',Georgia,serif] text-3xl font-bold tracking-tight text-prussian-400 dark:text-alabaster-800 sm:text-4xl">
             Exam Performance Analysis
           </h1>
-          <p className="mt-2 max-w-xl text-sm text-[#003153]/60 dark:text-[#93b8d4]/70">
-            Generated from your academic profile. Results are model-based estimates and should be
-            interpreted alongside teacher feedback.
+          <p className="mt-2 max-w-xl text-sm text-prussian-500/60 dark:text-prussian-800/70">
+            Generated from your academic profile. Results are model-based
+            estimates and should be interpreted alongside teacher feedback.
           </p>
         </header>
 
-        {/* ── Section 1: Prediction Hero ───────────────────────────────────── */}
         <section aria-labelledby="prediction-heading" className="mb-8">
-          <Card className="overflow-hidden border border-[#003153]/10 bg-white shadow-sm dark:border-[#4a90c4]/15 dark:bg-[#0d1f3c]">
+          <Card className="overflow-hidden border border-prussian-500/10 bg-white shadow-sm dark:border-prussian-700/15 dark:bg-prussian-200">
             <div className="grid grid-cols-1 gap-0 md:grid-cols-[1fr_1px_auto]">
-              {/* Score panel */}
               <CardContent className="p-7 sm:p-9">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
-                    <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-[#003153]/50 dark:text-[#93b8d4]/50">
+                    <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-prussian-500/50 dark:text-prussian-800/50">
                       Predicted Exam Score
                     </p>
                     <div className="mt-1 flex items-end gap-3">
-                      <span className="font-['Playfair_Display',Georgia,serif] text-7xl font-bold leading-none text-[#002244] dark:text-[#d4e6f1]">
-                        {modelResponse.predicted_score}
+                      <span className="font-['Playfair_Display',Georgia,serif] text-7xl font-bold leading-none text-prussian-400 dark:text-alabaster-800">
+                        {predictedScore}
                       </span>
-                      <span className="mb-2 text-xl font-light text-[#003153]/40 dark:text-[#93b8d4]/40">
+                      <span className="mb-2 text-xl font-light text-prussian-500/40 dark:text-prussian-800/40">
                         / 100
                       </span>
                     </div>
 
-                    {/* Delta from previous */}
                     <div className="mt-3 flex items-center gap-2">
                       <div
                         className={`flex items-center gap-1 text-sm font-medium ${
                           scoreDelta > 0
                             ? "text-emerald-600 dark:text-emerald-400"
                             : scoreDelta < 0
-                            ? "text-red-500 dark:text-red-400"
-                            : "text-[#003153]/50 dark:text-[#93b8d4]/50"
+                              ? "text-red-500 dark:text-red-400"
+                              : "text-prussian-500/50 dark:text-prussian-800/50"
                         }`}
                       >
                         {scoreDelta > 0 ? (
@@ -345,107 +339,111 @@ export default function ResultsPage() {
                           {scoreDelta} from previous
                         </span>
                       </div>
-                      <span className="text-xs text-[#003153]/35 dark:text-[#93b8d4]/40">
-                        (was {modelInput.previous_scores})
+                      <span className="text-xs text-prussian-500/35 dark:text-prussian-800/40">
+                        (was {previousScore})
                       </span>
                     </div>
                   </div>
-
-                  {/* Performance badge */}
                   <div className="flex flex-col items-end gap-2">
                     <span
                       className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold tracking-wide ${tier.color}`}
                     >
-                      <span className={`h-1.5 w-1.5 rounded-full ${tier.dot}`} />
-                      {modelResponse.performance_tier} Performance
+                      <span
+                        className={`h-1.5 w-1.5 rounded-full ${tier.dot}`}
+                      />
+                      {performanceTier} Performance
                     </span>
                   </div>
                 </div>
 
-                <Separator className="my-6 bg-[#003153]/8 dark:bg-[#4a90c4]/10" />
+                <Separator className="my-6 bg-prussian-500/8 dark:bg-prussian-700/10" />
 
-                {/* Confidence */}
                 <div>
                   <div className="mb-2 flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-xs font-medium text-[#003153]/60 dark:text-[#93b8d4]/60">
+                    <span className="flex items-center gap-1.5 text-xs font-medium text-prussian-500/60 dark:text-prussian-800/60">
                       <Target className="h-3.5 w-3.5" />
                       Model Confidence
                     </span>
-                    <span className="text-sm font-semibold text-[#002244] dark:text-[#d4e6f1]">
-                      {modelResponse.confidence}%
+                    <span className="text-sm font-semibold text-prussian-400 dark:text-alabaster-800">
+                      {confidence}%
                     </span>
                   </div>
                   <Progress
-                    value={modelResponse.confidence}
-                    className="h-1.5 bg-[#003153]/10 dark:bg-[#4a90c4]/10 [&>div]:bg-[#003153] dark:[&>div]:bg-[#4a90c4]"
+                    value={confidence}
+                    className="h-1.5 bg-prussian-500/10 dark:bg-prussian-700/10 [&>div]:bg-prussian-600 dark:[&>div]:bg-prussian-700"
                   />
-                  <p className="mt-2 text-[11px] text-[#003153]/45 dark:text-[#93b8d4]/40">
-                    Based on gradient-boosted ensemble trained on 12,400+ student records
+                  <p className="mt-2 text-[11px] text-prussian-500/45 dark:text-prussian-800/40">
+                    Based on gradient-boosted ensemble model trained on
+                    historical student data
                   </p>
                 </div>
               </CardContent>
 
-              {/* Vertical divider */}
-              <div className="hidden w-px bg-[#003153]/8 dark:bg-[#4a90c4]/10 md:block" />
+              <div className="hidden w-px bg-prussian-500/8 dark:bg-prussian-700/10 md:block" />
 
-              {/* Quick stats */}
-              <CardContent className="flex flex-row justify-between gap-6 border-t border-[#003153]/8 p-7 dark:border-[#4a90c4]/10 md:min-w-[220px] md:flex-col md:justify-start md:border-t-0 sm:p-9">
-                <div>
-                  <p className="mb-1 text-[11px] font-medium uppercase tracking-widest text-[#003153]/45 dark:text-[#93b8d4]/45">
-                    Study Hours
-                  </p>
-                  <div className="flex items-center gap-1.5">
-                    <BookOpen className="h-3.5 w-3.5 text-[#003153]/40 dark:text-[#4a90c4]/60" />
-                    <span className="text-lg font-semibold text-[#002244] dark:text-[#d4e6f1]">
-                      {modelInput.hours_studied}
-                    </span>
+              <CardContent className="flex flex-row justify-between gap-6 border-t border-prussian-500/8 p-7 dark:border-prussian-700/10 md:min-w-55 md:flex-col md:justify-start md:border-t-0 sm:p-9">
+                {[
+                  {
+                    label: "Study Hours",
+                    value: `${modelInput.hours_studied}`,
+                    icon: BookOpen,
+                  },
+                  {
+                    label: "Attendance",
+                    value: `${modelInput.attendance}%`,
+                    icon: Activity,
+                  },
+                  {
+                    label: "Sleep",
+                    value: `${modelInput.sleep_hours} hrs`,
+                    icon: Info,
+                    alert: modelInput.sleep_hours < 6,
+                  },
+                ].map(({ label, value, icon: Icon, alert }) => (
+                  <div key={label}>
+                    <p className="mb-1 text-[11px] font-medium uppercase tracking-widest text-prussian-500/45 dark:text-prussian-800/45">
+                      {label}
+                    </p>
+                    <div className="flex items-center gap-1.5">
+                      <Icon
+                        className={`h-3.5 w-3.5 ${
+                          alert
+                            ? "text-red-500 dark:text-red-400"
+                            : "text-prussian-500/40 dark:text-prussian-700/60"
+                        }`}
+                      />
+                      <span
+                        className={`text-lg font-semibold ${
+                          alert
+                            ? "text-red-600 dark:text-red-400"
+                            : "text-prussian-400 dark:text-alabaster-800"
+                        }`}
+                      >
+                        {value}
+                      </span>
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <p className="mb-1 text-[11px] font-medium uppercase tracking-widest text-[#003153]/45 dark:text-[#93b8d4]/45">
-                    Attendance
-                  </p>
-                  <div className="flex items-center gap-1.5">
-                    <Activity className="h-3.5 w-3.5 text-[#003153]/40 dark:text-[#4a90c4]/60" />
-                    <span className="text-lg font-semibold text-[#002244] dark:text-[#d4e6f1]">
-                      {modelInput.attendance}%
-                    </span>
-                  </div>
-                </div>
-                <div>
-                  <p className="mb-1 text-[11px] font-medium uppercase tracking-widest text-[#003153]/45 dark:text-[#93b8d4]/45">
-                    Sleep
-                  </p>
-                  <div className="flex items-center gap-1.5">
-                    <AlertCircle className="h-3.5 w-3.5 text-red-500 dark:text-red-400" />
-                    <span className="text-lg font-semibold text-red-600 dark:text-red-400">
-                      {modelInput.sleep_hours} hrs
-                    </span>
-                  </div>
-                </div>
+                ))}
               </CardContent>
             </div>
           </Card>
         </section>
-
-        {/* ── Section 2: Feature Importance ─────────────────────────────────── */}
         <section aria-labelledby="explainability-heading" className="mb-8">
           <div className="mb-4">
             <h2
               id="explainability-heading"
-              className="font-['Playfair_Display',Georgia,serif] text-xl font-semibold text-[#002244] dark:text-[#d4e6f1]"
+              className="font-['Playfair_Display',Georgia,serif] text-xl font-semibold text-prussian-400 dark:text-alabaster-800"
             >
               What Drives This Prediction
             </h2>
-            <p className="mt-1 text-sm text-[#003153]/55 dark:text-[#93b8d4]/60">
-              Feature importance calculated by the model. Higher values indicate stronger influence
-              on your predicted score.
+            <p className="mt-1 text-sm text-prussian-500/55 dark:text-prussian-800/60">
+              Feature contributions calculated by the model. Longer bars
+              indicate stronger influence on the predicted score.
             </p>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {/* Positive factors */}
-            <Card className="border border-[#003153]/10 bg-white shadow-sm dark:border-[#4a90c4]/15 dark:bg-[#0d1f3c]">
+            <Card className="border border-prussian-500/10 bg-white shadow-sm dark:border-prussian-700/15 dark:bg-prussian-200">
               <CardHeader className="px-5 pb-3 pt-5">
                 <div className="flex items-center gap-2">
                   <div className="h-2 w-2 rounded-full bg-emerald-500" />
@@ -455,32 +453,31 @@ export default function ResultsPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4 px-5 pb-5">
-                {positiveFeatures.map((f) => (
+                {positiveFactors.map((f) => (
                   <div key={f.feature}>
                     <div className="mb-1.5 flex items-center justify-between">
-                      <span className="text-xs font-medium text-[#002244] dark:text-[#c8dff0]">
+                      <span className="text-xs font-medium text-prussian-400 dark:text-alabaster-700">
                         {getFeatureLabel(f.feature)}
                       </span>
-                      <span className="font-mono text-[11px] text-[#003153]/50 dark:text-[#93b8d4]/50">
-                        {formatValue(f.current_value)}
+                      <span className="font-mono text-[11px] text-prussian-500/50 dark:text-prussian-800/50">
+                        {formatValue(f.feature, modelInput)}
                       </span>
                     </div>
                     <div className="h-1.5 w-full overflow-hidden rounded-full bg-emerald-100 dark:bg-emerald-950/40">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600 transition-all duration-700 dark:from-emerald-500 dark:to-emerald-400"
-                        style={{ width: `${f.importance}%` }}
+                        className="h-full rounded-full bg-linear-to-r from-emerald-400 to-emerald-600 transition-all duration-700 dark:from-emerald-500 dark:to-emerald-400"
+                        style={{ width: `${toPercentage(f.contribution)}%` }}
                       />
                     </div>
                     <div className="mt-1 text-right text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
-                      +{f.importance}%
+                      +{f.contribution.toFixed(2)}
                     </div>
                   </div>
                 ))}
               </CardContent>
             </Card>
 
-            {/* Negative factors */}
-            <Card className="border border-[#003153]/10 bg-white shadow-sm dark:border-[#4a90c4]/15 dark:bg-[#0d1f3c]">
+            <Card className="border border-prussian-500/10 bg-white shadow-sm dark:border-prussian-700/15 dark:bg-prussian-200">
               <CardHeader className="px-5 pb-3 pt-5">
                 <div className="flex items-center gap-2">
                   <div className="h-2 w-2 rounded-full bg-red-500" />
@@ -490,24 +487,24 @@ export default function ResultsPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4 px-5 pb-5">
-                {negativeFeatures.map((f) => (
+                {negativeFactors.map((f) => (
                   <div key={f.feature}>
                     <div className="mb-1.5 flex items-center justify-between">
-                      <span className="text-xs font-medium text-[#002244] dark:text-[#c8dff0]">
+                      <span className="text-xs font-medium text-prussian-400 dark:text-alabaster-700">
                         {getFeatureLabel(f.feature)}
                       </span>
-                      <span className="font-mono text-[11px] text-[#003153]/50 dark:text-[#93b8d4]/50">
-                        {formatValue(f.current_value)}
+                      <span className="font-mono text-[11px] text-prussian-500/50 dark:text-prussian-800/50">
+                        {formatValue(f.feature, modelInput)}
                       </span>
                     </div>
                     <div className="h-1.5 w-full overflow-hidden rounded-full bg-red-100 dark:bg-red-950/40">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-red-400 to-red-600 transition-all duration-700 dark:from-red-500 dark:to-red-400"
-                        style={{ width: `${Math.abs(f.importance)}%` }}
+                        className="h-full rounded-full bg-linear-to-r from-red-400 to-red-600 transition-all duration-700 dark:from-red-500 dark:to-red-400"
+                        style={{ width: `${toPercentage(f.contribution)}%` }}
                       />
                     </div>
                     <div className="mt-1 text-right text-[10px] font-medium text-red-500 dark:text-red-400">
-                      {f.importance}%
+                      {f.contribution.toFixed(2)}
                     </div>
                   </div>
                 ))}
@@ -516,125 +513,167 @@ export default function ResultsPage() {
           </div>
         </section>
 
-        {/* ── Section 3: AI-Generated Suggestions ──────────────────────────── */}
+        <section aria-labelledby="ai-explanation-heading" className="mb-8">
+          <Card className="border border-prussian-500/15 bg-prussian-400/3 shadow-sm dark:border-prussian-700/20 dark:bg-prussian-700/5">
+            <CardContent className="p-5 sm:p-7">
+              <button
+                className="group flex w-full items-center justify-between gap-3"
+                onClick={() => setAiExpanded(!aiExpanded)}
+                aria-expanded={aiExpanded}
+                aria-controls="ai-explanation-body"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-prussian-500/10 dark:bg-prussian-700/15">
+                    <Brain className="h-3.5 w-3.5 text-prussian-500 dark:text-prussian-700" />
+                  </div>
+                  <div className="text-left">
+                    <h2
+                      id="ai-explanation-heading"
+                      className="text-sm font-semibold text-prussian-400 dark:text-alabaster-800"
+                    >
+                      Model Explanation
+                    </h2>
+                    <p className="text-[11px] text-prussian-500/50 dark:text-prussian-800/50">
+                      Detailed breakdown of feature impacts
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] font-medium text-prussian-500/60 opacity-70 transition-opacity group-hover:opacity-100 dark:text-prussian-700/70">
+                  <Sparkles className="h-3 w-3" />
+                  <span>{aiExpanded ? "Collapse" : "View details"}</span>
+                </div>
+              </button>
+
+              {aiExpanded && (
+                <div id="ai-explanation-body" className="mt-5">
+                  <Separator className="mb-5 bg-prussian-500/8 dark:bg-prussian-700/10" />
+                  <div className="rounded-lg border border-prussian-500/10 bg-white/60 p-4 dark:border-prussian-700/15 dark:bg-prussian-100/60 sm:p-5">
+                    <div className="mb-3 flex items-center gap-1.5">
+                      <Info className="h-3 w-3 text-prussian-500/40 dark:text-prussian-800/40" />
+                      <span className="text-[10px] font-semibold uppercase tracking-widest text-prussian-500/40 dark:text-prussian-800/40">
+                        Feature Impact Analysis
+                      </span>
+                    </div>
+                    <div className="space-y-1.5">
+                      {(modelResponse?.explaination ?? []).map((line, i) => (
+                        <p
+                          key={i}
+                          className="text-xs leading-relaxed text-prussian-500/75 dark:text-prussian-800/80"
+                        >
+                          • {line}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </section>
+
         <section aria-labelledby="ai-suggestions-heading" className="mb-8">
           <div className="mb-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2
-                  id="ai-suggestions-heading"
-                  className="font-['Playfair_Display',Georgia,serif] text-xl font-semibold text-[#002244] dark:text-[#d4e6f1]"
-                >
-                  Personalized AI Recommendations
-                </h2>
-                <p className="mt-1 text-sm text-[#003153]/55 dark:text-[#93b8d4]/60">
-                  AI-generated actionable advice based on your specific profile and weak areas.
-                </p>
-              </div>
-              {aiSuggestions.length === 0 && (
-                <Button
-                  onClick={handleGenerateAISuggestions}
-                  disabled={loadingAI}
-                  className="bg-[#003153] text-white hover:bg-[#002244] dark:bg-[#4a90c4] dark:text-[#0a1628] dark:hover:bg-[#5ba3d6]"
-                >
-                  {loadingAI ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="mr-2 h-4 w-4" />
-                      Generate Suggestions
-                    </>
-                  )}
-                </Button>
-              )}
-            </div>
+            <h2 className="font-['Playfair_Display',Georgia,serif] text-xl font-semibold text-prussian-400 dark:text-alabaster-800">
+              Personalized AI Recommendations
+            </h2>
+            <p className="mt-1 text-sm text-prussian-500/55 dark:text-prussian-800/60">
+              AI-generated actionable advice based on your profile.
+            </p>
           </div>
 
-          {aiSuggestions.length > 0 && (
-            <div className="space-y-3">
-              {aiSuggestions.map((suggestion, i) => (
-                <Card
-                  key={i}
-                  className={`border border-l-4 ${priorityConfig[suggestion.priority].color} border-[#003153]/10 bg-white shadow-sm transition-shadow hover:shadow-md dark:border-[#4a90c4]/15 dark:bg-[#0d1f3c]`}
-                >
-                  <CardContent className="p-5 sm:p-6">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="min-w-0 flex-1">
-                        <div className="mb-2 flex flex-wrap items-center gap-2">
-                          <Badge
-                            variant="outline"
-                            className={`text-[10px] border px-2 py-0 h-5 font-semibold uppercase tracking-wide ${priorityConfig[suggestion.priority].badge}`}
-                          >
-                            {suggestion.priority} priority
-                          </Badge>
-                          <span className="text-[11px] font-semibold uppercase tracking-widest text-[#003153]/40 dark:text-[#93b8d4]/40">
-                            {suggestion.category}
-                          </span>
-                          <Badge
-                            variant="outline"
-                            className="text-[10px] h-5 border-emerald-300 bg-emerald-50 px-2 py-0 font-semibold text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
-                          >
-                            {suggestion.estimated_impact}
-                          </Badge>
-                        </div>
-
-                        <h3 className="mb-2 text-sm font-semibold text-[#002244] dark:text-[#d4e6f1]">
-                          {suggestion.title}
-                        </h3>
-
-                        <p className="mb-3 text-xs leading-relaxed text-[#003153]/60 dark:text-[#93b8d4]/65">
-                          {suggestion.description}
-                        </p>
-
-                        {/* Collapsible action steps */}
-                        <button
-                          onClick={() => setExpandedSuggestion(expandedSuggestion === i ? null : i)}
-                          className="flex items-center gap-2 text-xs font-semibold text-[#003153] transition-colors hover:text-[#002244] dark:text-[#93b8d4] dark:hover:text-[#d4e6f1]"
-                        >
-                          <ChevronDown
-                            className={`h-3.5 w-3.5 transition-transform ${
-                              expandedSuggestion === i ? "rotate-180" : ""
-                            }`}
-                          />
-                          {expandedSuggestion === i ? "Hide" : "View"} Action Steps
-                        </button>
-
-                        {expandedSuggestion === i && (
-                          <div className="mt-3 rounded-lg border border-[#003153]/10 bg-[#003153]/[0.02] p-3 dark:border-[#4a90c4]/15 dark:bg-[#4a90c4]/5">
-                            <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-[#003153]/50 dark:text-[#93b8d4]/50">
-                              Actionable Steps:
-                            </p>
-                            <ul className="space-y-1.5">
-                              {suggestion.actionable_steps.map((step, idx) => (
-                                <li
-                                  key={idx}
-                                  className="flex items-start gap-2 text-xs leading-relaxed text-[#003153]/70 dark:text-[#93b8d4]/70"
-                                >
-                                  <ChevronRight className="mt-0.5 h-3 w-3 flex-shrink-0 text-[#003153]/40 dark:text-[#4a90c4]/60" />
-                                  <span>{step}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                      </div>
+          {!ai ? (
+            <div className="text-sm text-prussian-500">
+              No AI suggestions available.
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-sm font-semibold text-red-500 mb-2">
+                  Key Weak Areas
+                </h3>
+                <div className="space-y-2">
+                  {weaknesses.map((w, i) => (
+                    <div
+                      key={i}
+                      className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+                    >
+                      <p className="text-xs font-semibold">
+                        {getFeatureLabel(w.feature)}
+                      </p>
+                      <p className="text-[11px] text-red-600">
+                        Impact: {w.impact}
+                      </p>
+                      <p className="text-xs mt-1 text-prussian-500 dark:text-prussian-300">
+                        {w.advice}
+                      </p>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
+                  ))}
+                </div>
+              </div>
+
+              {/* 🟢 Strengths */}
+              <div>
+                <h3 className="text-sm font-semibold text-emerald-500 mb-2">
+                  Strengths
+                </h3>
+                <div className="space-y-2">
+                  {strengths.map((s, i) => (
+                    <div
+                      key={i}
+                      className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800"
+                    >
+                      <p className="text-xs font-semibold">
+                        {getFeatureLabel(s.feature)}
+                      </p>
+                      <p className="text-xs mt-1 text-prussian-500 dark:text-prussian-300">
+                        {s.reason}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-semibold text-orange-500 mb-2">
+                  Action Plan
+                </h3>
+                <div className="space-y-3">
+                  {suggestions.map((s, i) => (
+                    <div
+                      key={i}
+                      className="p-4 rounded-lg border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/20"
+                    >
+                      <div className="flex justify-between items-center mb-1">
+                        <p className="text-sm font-semibold">{s.title}</p>
+                        <span className="text-xs text-orange-400 font-bold border-2 border-orange-400 rounded-xl px-2 py-0.5  bg-orange-500/10 dark:bg-orange-800">
+                          {s.priority}
+                        </span>
+                      </div>
+
+                      <p className="text-xs text-orange-600 mb-2">
+                        Impact: {s.expected_impact}
+                      </p>
+
+                      <ul className="list-disc list-inside text-xs text-prussian-500 dark:text-alabaster-900 space-y-1">
+                        {(s.action_steps ?? []).map((step, idx) => (
+                          <li key={idx} className="">
+                            {step}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </section>
-
-        {/* ── Footer ────────────────────────────────────────────────────────── */}
-        <footer className="mb-10 border-t border-[#003153]/10 pt-6 text-center dark:border-[#4a90c4]/10">
-          <p className="mx-auto max-w-xl text-[11px] leading-relaxed text-[#003153]/40 dark:text-[#93b8d4]/35">
-            This report is generated by a machine learning model and is intended as a supplementary
-            academic tool only. Predictions carry inherent uncertainty. Please consult an academic
-            advisor for personalised guidance.
+        <footer className="border-t border-prussian-500/10 pt-6 text-center dark:border-prussian-700/10">
+          <p className="mx-auto max-w-xl text-[11px] leading-relaxed text-prussian-500/40 dark:text-prussian-800/35">
+            This report is generated by a machine learning model and is intended
+            as a supplementary academic tool only. Predictions carry inherent
+            uncertainty. Please consult an academic advisor for personalised
+            guidance.
           </p>
         </footer>
       </div>

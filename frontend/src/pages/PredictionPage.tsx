@@ -1,4 +1,4 @@
-//import { Link } from "react-router-dom"
+
 import {
   formSchema,
   type InputFormData,
@@ -8,6 +8,8 @@ import axios from "axios";
 import { Controller, useForm, type Resolver } from "react-hook-form";
 import { InputField } from "@/components/InputField";
 //import { toast } from "sonner";
+
+
 
 import {
   AlertDialog,
@@ -36,8 +38,13 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 
+import { useModelStore } from "@/context/ModelInputContext";
+
 const PredictionPage = () => {
   const navigate = useNavigate();
+
+  const setModelInput = useModelStore((state) => state.setModelInput);
+
 
   const form = useForm<InputFormData>({
     resolver: zodResolver(formSchema) as Resolver<InputFormData>,
@@ -67,8 +74,6 @@ const PredictionPage = () => {
     },
   });
 
-  //TODO: Navigation to analysis page +++++++++++++++++++++++++++===========================
-
   const [open, setOpen] = useState<boolean>(false);
 
   const onSubmit = async (data: InputFormData) => {
@@ -80,7 +85,9 @@ const PredictionPage = () => {
         data,
       );
       console.log(response);
+      setModelInput(data);
       if (response.status === 200) {
+
         navigate("/analysis");
       }
       return response;
